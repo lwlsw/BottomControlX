@@ -41,6 +41,23 @@ static BOOL     enabled                      = NO;
 // static BOOL     bringControlCenterUp         = NO;
 // static int      location                     = 1;
 
+
+static UIViewController* topMostController() {
+    UIViewController *topController = [UIApplication sharedApplication].keyWindow.rootViewController;
+    while (topController.presentedViewController) {
+        topController = topController.presentedViewController;
+    }
+    
+    return topController;
+}
+
+static void showAlert(NSString *myMessage) {
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Alert" message:myMessage preferredStyle:UIAlertControllerStyleAlert];
+    [alertController addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+    [topMostController() presentViewController:alertController animated:YES completion:nil];
+}
+
+
 inline int handleSwipeUpGesture(CGFloat startPoint, int left, int center, int right) {
 
     int gesture = 0;
@@ -93,7 +110,7 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
     AppBottomCenterGesture    = readThePreferencesFile(@"AppBottomCenterGesture", intValue, 1);
     AppBottomRightGesture     = readThePreferencesFile(@"AppBottomRightGesture", intValue, 1);
 
-    velocityValue             = readThePreferencesFile(@"velocityValue", floatValue, 350);
+    velocityValue             = readThePreferencesFile(@"velocityValue", floatValue, 650);
 
 }
 
@@ -105,6 +122,8 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
 -(void)_handleDismissGesture:(id)arg1 {
 
     CGPoint point = [self _locationForGesture:[self dismissGestureRecognizer]];
+	//showAlert([NSString stringWithFormat:@"参数arg3 %f，%f", point.x, point.y]);
+
     BOOL hasBeenAuthenticated = NO;
     if(kiOSVersion >= 13.0) hasBeenAuthenticated = [[[%c(SBLockScreenManager) sharedInstance] coverSheetViewController] isAuthenticated];
     else hasBeenAuthenticated = [[[%c(SBLockScreenManager) sharedInstance] lockScreenViewController] isAuthenticated];
@@ -132,21 +151,36 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
 // handle fluid gesture
 %hook SBFluidSwitcherGestureManager
 
--(void)grabberTongueBeganPulling:(id)arg1 withDistance:(double)arg2 andVelocity:(double)arg3 {
+//你好 在SBFluidSwitcherGestureManager中，有一个名为deckGrabberTongue（SBGrabberTongue *）的变量和一个名为- (void)grabberTongueBeganPulling:(id)arg1 withDistance:(double)arg2 andVelocity:(double)arg3
+//如果每次调用此功能时都要检查手势的位置，则可以决定是显示CC还是返回首页。
 
-    if(arg3 <= velocityValue && lowerSensibility) {
+-(void)grabberTongueBeganPulling:(id)arg1 withDistance:(double)arg2 andVelocity:(double)arg3 {
+    //DLog(@"参数：arg3 %@", arg3);
+	//showAlert([NSString stringWithFormat:@"参数arg3 %@ %f，%f", arg1 , arg3, arg2]);
+
+    int ori         = [((SpringBoard *)[UIApplication sharedApplication]) _frontMostAppOrientation];
+	
+	//禁用横屏手势，因为没有那个必要开启横屏手势，横屏下还容易误触
+    if(ori != 1) {
+        %orig;
+        return;
+    }
+	
+    //if(arg3 <= velocityValue && lowerSensibility) {
+    if(arg3 <= velocityValue) {
         %orig;
         return;
     }
 
     CGPoint point   = [[self.deckGrabberTongue valueForKey:@"_edgePullGestureRecognizer"] locationInView:[self.deckGrabberTongue valueForKey:@"_tongueContainer"]];
-    int ori         = [((SpringBoard *)[UIApplication sharedApplication]) _frontMostAppOrientation];
-
+	
     CGFloat pointX = (ori == 1) ? point.x
                                 : (ori == 3) ? point.y
                                              : kScreenWidth - point.y;
 
     int result;
+	
+	//判断当前处于app还是桌面上，handleSwipeUpGesture是执行手势
     if(![(SpringBoard  *)[UIApplication sharedApplication] _accessibilityFrontMostApplication]) {
         result = handleSwipeUpGesture(pointX, SBBottomLeftGesture, SBBottomCenterGesture, SBBottomRightGesture);
     }else {

@@ -1,8 +1,10 @@
 #import <SpringBoard/SpringBoard.h>
 
 @interface SpringBoard ()
--(void)takeScreenshot;
+- (void)takeScreenshot;
+- (long long)_frontMostAppOrientation;
 @end
+
 
 @interface SBGrabberTongue : NSObject
 {
