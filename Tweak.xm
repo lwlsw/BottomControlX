@@ -110,7 +110,7 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
     AppBottomCenterGesture    = readThePreferencesFile(@"AppBottomCenterGesture", intValue, 1);
     AppBottomRightGesture     = readThePreferencesFile(@"AppBottomRightGesture", intValue, 1);
 
-    velocityValue             = readThePreferencesFile(@"velocityValue", floatValue, 650);
+    velocityValue             = readThePreferencesFile(@"velocityValue", floatValue, 350);
 
 }
 
@@ -166,8 +166,8 @@ static void reloadSettings(CFNotificationCenterRef center, void *observer, CFStr
         return;
     }
 	
-    //if(arg3 <= velocityValue && lowerSensibility) {
-    if(arg3 <= velocityValue) {
+    if(arg3 <= velocityValue && lowerSensibility) {
+    //if(arg3 <= velocityValue) {
         %orig;
         return;
     }
